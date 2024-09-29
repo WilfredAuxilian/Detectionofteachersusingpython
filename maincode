@@ -1,0 +1,96 @@
+#Installing Required Libraries
+!pip install face_recognition
+!pip install opencv-python-headless
+
+#Importing Teacher Image 
+from google.colab import files
+uploaded = files.upload()
+teacher_image_path = list(uploaded.keys())[0]
+
+#Teacher Face Detection and Storing 
+import cv2
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Load the teacher's image and convert to grayscale
+teacher_image = cv2.imread(teacher_image_path)
+gray_teacher = cv2.cvtColor(teacher_image, cv2.COLOR_BGR2GRAY)
+
+# Detect faces in the teacher's image
+teacher_faces = face_cascade.detectMultiScale(gray_teacher, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+# Store the teacher's face (only if one face is found)
+if len(teacher_faces) == 1:
+    (x, y, w, h) = teacher_faces[0]
+    teacher_face = gray_teacher[y:y+h, x:x+w]
+    print("Teacher's face detected and stored.")
+else:
+    print("Error: No face or multiple faces detected in the teacher's image.")
+
+#Capturing Image
+from IPython.display import display, Javascript
+from google.colab.output import eval_js
+from base64 import b64decode
+
+def capture_image():
+    display(Javascript('''
+        async function takePhoto() {
+            const div = document.createElement('div');
+            const video = document.createElement('video');
+            const stream = await navigator.mediaDevices.getUserMedia({video: true});
+            document.body.appendChild(div);
+            div.appendChild(video);
+            video.srcObject = stream;
+            await video.play();
+
+            google.colab.output.setIframeHeight(document.documentElement.scrollHeight, true);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            stream.getVideoTracks()[0].stop();
+
+            const data = canvas.toDataURL('image/png');
+            div.remove();
+            return data;
+        }
+        takePhoto();
+    '''))
+    data = eval_js('takePhoto()')
+    binary = b64decode(data.split(',')[1])
+    with open('captured_image.png', 'wb') as f:
+        f.write(binary)
+
+# Capture image from the webcam
+capture_image()
+captured_image_path = 'captured_image.png'
+
+# Load the captured image and convert to grayscale
+captured_image = cv2.imread(captured_image_path)
+gray_captured = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
+
+# Detect faces in the captured image
+captured_faces = face_cascade.detectMultiScale(gray_captured, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+teacher_present = False
+
+# Compare faces in the captured image with the teacher's face
+for (x, y, w, h) in captured_faces:
+    captured_face = gray_captured[y:y+h, x:x+w]
+
+    # Resize both faces for comparison
+    resized_teacher_face = cv2.resize(teacher_face, (w, h))
+    diff = cv2.absdiff(resized_teacher_face, captured_face)
+
+    # Check if the difference is small enough to consider a match
+    if diff.mean() < 50:  # Adjust the threshold based on performance
+        teacher_present = True
+        break
+
+if teacher_present:
+    print("Teacher is present in the classroom.")
+else:
+    print("Teacher is not present.")
+
