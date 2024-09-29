@@ -1,24 +1,24 @@
-#Installing Required Libraries
+#InstallingRequiredLibraries
 !pip install face_recognition
 !pip install opencv-python-headless
 
-#Importing Teacher Image 
+#ImportingTeacherImage 
 from google.colab import files
 uploaded = files.upload()
 teacher_image_path = list(uploaded.keys())[0]
 
-#Teacher Face Detection and Storing 
+#TeacherFaceDetectionandStoring 
 import cv2
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Load the teacher's image and convert to grayscale
+# Loadtheteacherimageandconverttograyscale
 teacher_image = cv2.imread(teacher_image_path)
 gray_teacher = cv2.cvtColor(teacher_image, cv2.COLOR_BGR2GRAY)
 
-# Detect faces in the teacher's image
+# Detectfacesintheteacherimage
 teacher_faces = face_cascade.detectMultiScale(gray_teacher, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-# Store the teacher's face (only if one face is found)
+# Storetheteacherimage(onlyifonefaceisfound)
 if len(teacher_faces) == 1:
     (x, y, w, h) = teacher_faces[0]
     teacher_face = gray_teacher[y:y+h, x:x+w]
@@ -26,7 +26,7 @@ if len(teacher_faces) == 1:
 else:
     print("Error: No face or multiple faces detected in the teacher's image.")
 
-#Capturing Image
+#CapturingImage
 from IPython.display import display, Javascript
 from google.colab.output import eval_js
 from base64 import b64decode
@@ -63,28 +63,28 @@ def capture_image():
     with open('captured_image.png', 'wb') as f:
         f.write(binary)
 
-# Capture image from the webcam
+# Captureimagefromthewebcam
 capture_image()
 captured_image_path = 'captured_image.png'
 
-# Load the captured image and convert to grayscale
+# Loadthecapturedimageandconvert to grayscale
 captured_image = cv2.imread(captured_image_path)
 gray_captured = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
 
-# Detect faces in the captured image
+# Detectfacesinthecapturedimage
 captured_faces = face_cascade.detectMultiScale(gray_captured, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
 teacher_present = False
 
-# Compare faces in the captured image with the teacher's face
+# Comparefacesinthecapturedimagewiththeteacherface
 for (x, y, w, h) in captured_faces:
     captured_face = gray_captured[y:y+h, x:x+w]
 
-    # Resize both faces for comparison
+    # Resizebothfacesforcomparison
     resized_teacher_face = cv2.resize(teacher_face, (w, h))
     diff = cv2.absdiff(resized_teacher_face, captured_face)
 
-    # Check if the difference is small enough to consider a match
+    # Checkifthedifferenceissmallenoughtoconsideramatch
     if diff.mean() < 50:  # Adjust the threshold based on performance
         teacher_present = True
         break
